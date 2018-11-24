@@ -1,0 +1,381 @@
+---
+title: "Bioinformatics Lab2"
+author: "Milda Poceviciute"
+date: "24 November 2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+```{r, echo=FALSE,warning=FALSE,message=FALSE}
+library(ape)
+library(phangorn)
+library(markovchain)
+library(seqinr)
+library(msa)
+library(lattice)
+```
+
+# Question 1: DNA sequence acquisition and simulation
+In this question an analysis of 3 nucleotide sequences is performed. One sequence is downloaded from GenBank database, and saved into fatsa file. Here we load thev data set:
+
+```{r}
+lizards_sequences<-ape::read.FASTA("lizard_seqs.fasta")
+```
+
+
+## Q1.1
+
+In this part we simulate DNA sequences with the same base composition and sequences length as the one from the GenBank:
+
+```{r}
+len_list <- lengths(lizards_sequences)
+new_seq_list <- list()
+new_seq <- c()
+for (i in 1:length(lizards_sequences)){
+    # extract the base composition of each sequence
+    freqx <- ape::base.freq(lizards_sequences[i])
+    new_seq <- sample(c("a","c","g","t"),len_list[i],rep=TRUE,prob=freqx)
+    new_seq_list[i] <- list(new_seq)
+}
+
+# convert result to the DNAbin class
+simulated_seq1 <- as.DNAbin(new_seq_list)
+names(simulated_seq1) <- names(lizards_sequences)
+
+```
+
+```{r,echo=FALSE}
+cat("Base composition of the data from GenBank:")
+cat("\n")
+ape::base.freq(lizards_sequences)
+cat("\n")
+cat("Base composition of the simulated sequences:")
+cat("\n")
+ape::base.freq(simulated_seq1)
+
+```
+
+We can see that the original data, and the simulated data have quite similar base compositions.
+
+## Q1.2
+
+In this part we simulate another set of DNA data with similar characteristics as the original one. Now we use a simulated tree with 33 nodes from the original data and package phangorn to do this:
+
+
+```{r}
+# Simulate a tree with 33 nodes
+tree <- rtree(n = 33, rooted = TRUE, tip.label = names(lizards_sequences) )
+plot(tree, edge.width = 2)
+
+```
+
+We need to create a transition matrix, so we use the full dataset to compute that:
+```{r}
+data <- c()
+simulated_seq_tree <- list()
+
+DNA_list <- unlist(as.character(lizards_sequences),use.names = FALSE)
+DNA_unique <- c("a","c","g","t")
+matrix <-  matrix(0, ncol = length(DNA_unique),
+                  nrow = length(DNA_unique))
+
+for (i in 1:(length(DNA_list) - 1)) {
+    index_of_i <- DNA_unique == DNA_list[i]
+    index_of_i_plus_1 <- DNA_unique == DNA_list[i + 1]
+    matrix[index_of_i, index_of_i_plus_1] = matrix[index_of_i, index_of_i_plus_1] + 1
+}
+
+# Transition matrix is finally computed
+Q <- matrix / rowSums(matrix)
+Q_lower <- Q[lower.tri(Q)]
+# Other parameters that are needed for phangorn package function
+bf <-  ape::base.freq(lizards_sequences)
+size <- round(mean(len_list))
+```
+
+```{r}
+# Generating the data based on the tree
+
+simulated_seq_tree <-  phangorn::simSeq(
+        tree,
+        l = size,
+        type = "DNA",
+        bf = bf,
+        Q = Q_lower)
+
+# change numbers into letters   
+simulated_seq_tree2 <- lapply(simulated_seq_tree,function(seq){
+    #seq = a
+    states = c("a","c","g","t") 
+    seq[which(seq==1)] <- states[1]
+    seq[which(seq==2)] <- states[2]
+    seq[which(seq==3)] <- states[3]
+    seq[which(seq==4)] <- states[4]
+    return(seq)
+})
+
+simulated_seq2 <- as.DNAbin(simulated_seq_tree2)
+# Write the simulated sequence to a fasta file
+#ape::write.dna(simulated_seq2, file ="lizard_sim_seqs.fasta", format = "fasta", append =FALSE, nbcol = 6, colsep = " ", colw = 10)
+
+```
+
+
+```{r,echo=FALSE}
+cat("Base composition of the data from GenBank:")
+cat("\n")
+ape::base.freq(lizards_sequences)
+cat("\n")
+cat("Base composition of the simulated sequences Q1.1:")
+cat("\n")
+ape::base.freq(simulated_seq1)
+cat("\n")
+cat("Base composition of the simulated sequences Q1.2:")
+cat("\n")
+ape::base.freq(simulated_seq2)
+
+```
+
+The base compositions of all simulated sequences are quite similar to the original one. The sequence from Q1.2 seems to have a bit more similar composition to the original one than the sequences from Q1.2. ANY IDEAS WHY??
+
+# Question 2: Sequence analysis
+
+## Q2.1
+
+```{r, echo=FALSE}
+for (i in 1:length(lizards_sequences)){
+    cat(paste0("Individual base composition of sequence ",i))
+    cat("\n")
+    cat("The data from the GenBank:")
+    cat("\n")
+    print(ape::base.freq(lizards_sequences[i]))
+    cat("The simulated data in Q1.1:")
+    cat("\n")
+    print(ape::base.freq(simulated_seq1[i]))
+    cat("The simulated data in Q1.2:")
+    cat("\n")
+    print(ape::base.freq(simulated_seq2[i]))
+    cat("\n")
+}
+```
+
+The CG contents are:
+
+```{r, echo=FALSE}
+# CG content
+comp_true <- ape::base.freq(lizards_sequences)
+cg_true <- sum(comp_true[2:3])/sum(comp_true)
+comp_s1 <- ape::base.freq(simulated_seq1)
+cg_s1 <- sum(comp_s1[2:3])/sum(comp_s1)
+comp_s2 <- ape::base.freq(simulated_seq2)
+cg_s2 <- sum(comp_s2[2:3])/sum(comp_s2)
+
+cat("In the data from the GenBank:")
+cat("\n")
+print(cg_true)
+cat("In the simulated data in Q1.1:")
+cat("\n")
+print(cg_s1)
+cat("In the simulated data in Q1.2:")
+cat("\n")
+print(cg_s2)
+cat("\n")
+```
+
+A,C,G,T contents are:
+```{r}
+# A,C,G,T content
+cat("In the data from the GenBank:")
+cat("\n")
+print(ape::base.freq(lizards_sequences))
+cat("In the simulated data in Q1.1:")
+cat("\n")
+print(ape::base.freq(simulated_seq1))
+cat("In the simulated data in Q1.2:")
+cat("\n")
+print(ape::base.freq(simulated_seq2))
+```
+
+The nucleotide sequences were transformed into amino acid sequences using the EMBOSS Transeq function, and saved to a fasta file:
+
+```{r, message=FALSE,warning=FALSE}
+
+amino_lizard_seq <- read.fasta("lizard_amino_seqs.fasta")
+amino_sim1_seq <- read.fasta("sim1_amino_seq.fasta")
+amino_sim2_seq <- read.fasta("lizard_amino_sim_seqs.fasta")
+```
+
+WHAT DO WE COMMENT ABOUT THE STOP CODONS???
+
+```{r}
+find_stops <- function(a){
+    stop <- a[which(a == "*")]
+    return(length(stop))
+}
+stop_codons_lizard <- lapply(amino_lizard_seq,find_stops)
+stop_codons_sim1 <- lapply(amino_sim1_seq,find_stops)
+stop_codons_sim2 <- lapply(amino_sim2_seq,find_stops)
+```
+
+
+## Q2.2
+
+In this part we do markov chain analysis of the data sets. We combine all the sequences from each dataset to seperate lists, and use the _markovchainFit_ function with bootstrapping to estimate the Markov models. This function fits the first order markov model to all three datasets.
+
+```{r}
+lizard <- as.character(lizards_sequences)
+sim1 <- as.character(simulated_seq1)
+sim2 <- as.character(simulated_seq2)
+
+
+flat_lizard <- unlist(lizard,use.names = FALSE)
+mc_lizard <-  markovchainFit(flat_lizard,method = "bootstrap", nboot = 3, name = "Bootstrap Mc")
+
+# the original data contains some "weird nucleotides" - what to do with them?
+which(flat_lizard == "y")
+which(flat_lizard == "m")
+which(flat_lizard == "r")
+which(flat_lizard == "s")
+
+flat_sim1 <- unlist(sim1,use.names = FALSE)
+mc_sim1 <-  markovchainFit(flat_sim1,method = "bootstrap", nboot = 3, name = "Bootstrap Mc")
+
+flat_sim2 <- unlist(sim2,use.names = FALSE)
+mc_sim2 <-  markovchainFit(flat_sim2,method = "bootstrap", nboot = 3, name = "Bootstrap Mc")
+
+# comparison of the estimated transition matrices
+mc_lizard$estimate
+flat_sim1$estimate
+mc_sim2$estimate
+Q
+
+#markovchainSequence() - can use markov model to predict a sequence
+```
+
+We see that the original data set from GenBank contains a small amount of additional "nucleotides": they are called "y", "m", and "r". They are probably some measurement errors that were produced when the DNA sequence was scanned (IS THIS TRUE??).
+
+```{r}
+plot(mc_lizard$estimate)
+plot(mc_sim1$estimate)
+plot(mc_sim2$estimate)
+```
+
+```{r}
+# Results from the zero order 
+    barplot(zeroOrderFreq,col=1:4,
+            main="Compositional bias of each nucleotide\nZero Order Markov Chain",
+            xlab="Base",
+            ylab="Base proportion")
+
+```
+
+In the first order Markov chains we assume that the nucleotide $X_n$ only depends on a previous nucleotide, namely $X_{n-1}$. This is not a reasonable assumption, as DNA (or RNA) sequences contain the codons: the triplets of the nulceotides that determine what amino acids will be produced from it. Hence, it may be more reasonable that the most important dependences are between nucleotides in these triplets. In the lecture it was mentioned that there is some research supporting that a sixth order Markov Chain models perform better. That implies that the $n$th nucleotide depends on what were the previous 5 nucleotides. 
+
+## Q2.3
+
+In this part the three DNA collections of the sequences are aligned using the _msa_ package. Furthermore the distances between the alignments are calculated. They are used to produce the heatmaps
+
+```{r}
+aligment_lizard <- msa("lizard_seqs.fasta", type="dna")
+aligment_sim1 <- msa("sim1_seq.fasta", type="dna")
+aligment_sim2 <- msa("lizard_sim_seqs.fasta", type="dna")
+
+aligment_lizard2 <- msaConvert(aligment_lizard, type="seqinr::alignment")
+dist_lizard <- seqinr::dist.alignment(aligment_lizard2,matrix="identity")
+
+aligment_sim1_2 <- msaConvert(aligment_sim1, type="seqinr::alignment")
+dist_sim1 <- seqinr::dist.alignment(aligment_sim1_2,matrix="identity")
+
+aligment_sim2_2 <- msaConvert(aligment_sim2, type="seqinr::alignment")
+dist_sim2 <- seqinr::dist.alignment(aligment_sim2_2,matrix="identity")
+
+# the seqinr::dist.alignment computes the square root distance
+dm_lizard <- as.matrix(dist_lizard)
+dm_sim1 <- as.matrix(dist_sim1)
+dm_sim2 <- as.matrix(dist_sim2)
+```
+
+```{r}
+# heatmaps
+new.palette=colorRampPalette(c("black","red","yellow","white"),space="rgb")
+levelplot(dm_lizard[1:ncol(dm_lizard),ncol(dm_lizard):1],col.regions=new.palette(20))
+levelplot(dm_sim1[1:ncol(dm_sim1),ncol(dm_sim1):1],col.regions=new.palette(20))
+levelplot(dm_sim2[1:ncol(dm_sim2),ncol(dm_sim2):1],col.regions=new.palette(20))
+
+```
+
+The plots illustrate how much overlaying the sequences have in each dataset. The smaller the value (the darker the colour), the more nucleotides are matching between the corresponding sequences of the DNA. Therefore, the sequences from the data from GenBank has much more overlaying parts then the two randomly generated sequences. This result is expected as sequencing of a DNA produces "fragments" of the real DNA sequence, and those "fragments" do contain the same bits of the original DNA. The artificially simulated DNA sequences did not actually go through a process of the sequencing, hence they are way less likely to randomly contain long matching parts in their sequences. 
+
+# Question 3: Phylogeny reconstruction
+## Q3.1
+
+```{r}
+nj_tree <- function(x){
+    tr <- nj(x)
+    tr$tip.label <- names(lizards_sequences)
+    return(tr)
+} 
+
+
+hemoTree_lizard <- nj_tree(dist_lizard)
+
+
+
+hemoTree_sim1 <- nj_tree(dm_sim1)
+
+
+hemoTree_sim2 <- nj_tree(dm_sim2)
+
+# Perform a phylogenetic bootstrap analysis
+
+
+boot_lizard <-  boot.phylo(hemoTree_lizard, dm_lizard, FUN=nj_tree, quiet = TRUE)
+boot_s1     <- boot.phylo(hemoTree_sim1, dm_sim1, FUN=nj_tree, quiet = TRUE)
+boot_s2     <- boot.phylo(hemoTree_sim2, dm_sim2, FUN=nj_tree, quiet = TRUE)
+
+#it is the number of bootstraped trees that have the same breaks as your main input tree
+
+```
+
+## Q3.2
+
+```{r}
+
+plot(hemoTree_lizard, main="Phylogenetic Tree of Lizard")
+plot(hemoTree_sim1, main="Phylogenetic Tree of Lizard DNA Sim1")
+plot(hemoTree_sim2, main="Phylogenetic Tree of Lizard DNA Sim2")
+
+```
+
+```{r}
+
+comp1 <- ape::comparePhylo(hemoTree_lizard,hemoTree_sim1)
+comp2 <- ape::comparePhylo(hemoTree_lizard,hemoTree_sim2)
+comp12 <- ape::comparePhylo(hemoTree_sim1,hemoTree_sim2)
+# An ultrametric tree - a tree where all the path-lengths from the root to the tips are equal
+
+```
+
+```{r}
+plot(pressure)
+```
+
+```{r}
+plot(pressure)
+```
+
+```{r}
+plot(pressure)
+```
+
+
+
+
+
+
+
+

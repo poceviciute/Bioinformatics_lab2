@@ -31,23 +31,9 @@ print(ape::base.freq(lizards_sequences[i]))
 print(ape::base.freq(simulated_seq1[i]))
 }
 
+ape::write.dna(simulated_seq1, file ="sim1_seq.fasta", format = "fasta", append =FALSE, nbcol = 6, colsep = " ", colw = 10)
 
 ## Q1.2
-
-new_seq_list <- list()
-new_seq <- c()
-for (i in 1:length(lizards_sequences)){
-    # extract the base composition of each sequence
-    freqx <- ape::base.freq(lizards_sequences[i])
-    new_seq <- sample(c("a","c","g","t"),len_list[i],rep=TRUE,prob=freqx)
-    new_seq_list[i] <- list(new_seq)
-}
-
-# convert result to the DNAbin class
-simulated_seq2 <- as.DNAbin(new_seq_list)
-names(simulated_seq2) <- paste0(names(lizards_sequences),"_2")
-lengths(simulated_seq2)
-lengths(lizards_sequences)
 
 # simulate a tree with 33 nodes
 
@@ -86,18 +72,18 @@ simulated_seq_tree <- list()
     print(bf)
     # generate the data from the tree
 
-    simulated_seq_tree <-  phangorn::simSeq(
-            tree,
-            l = size,
-            type = "DNA",
-            bf = bf,
-            Q = Q_lower)
+simulated_seq_tree <-  phangorn::simSeq(
+        tree,
+        l = size,
+        type = "DNA",
+        bf = bf,
+        Q = Q_lower)
     
 simulated_seq_tree <- as.DNAbin(simulated_seq_tree)
 ape::base.freq(lizards_sequences)
 ape::base.freq(simulated_seq_tree)
-ape::write.dna(simulated_seq_tree, file ="lizard_sim_seqs.fasta", format = "fasta", append =FALSE, nbcol = 6, colsep = " ", colw = 10)
-
+#ape::write.dna(simulated_seq_tree, file ="lizard_sim_seqs.fasta", format = "fasta", append =FALSE, nbcol = 6, colsep = " ", colw = 10)
+simulated_seq_tree <- ape::read.FASTA("lizard_sim_seqs.fasta")
 # Question 2: Sequence analysis
 
 ## Q2.1
@@ -123,10 +109,10 @@ print(ape::base.freq(simulated_seq1))
 print(ape::base.freq(simulated_seq_tree))
 
 # First locate the first start codon, and from there look for a stop codon
-
+ 
 lizard <- as.character(lizards_sequences)
 sim1 <- as.character(simulated_seq1)
-sim2 <- as.character(simulated_seq2)
+sim2 <- as.character(simulated_seq_tree)
 
 find_start <- function(seq){
     start_cod <- c("a","t","c")
@@ -249,8 +235,8 @@ no_stop(sim2_stops)
 library(markovchain)
 #mcX <- markovchainFit(lizard[2])
 #mcX 
-dim(mcX$estimate)
-which(lizard[1] == "y")
+#dim(mcX$estimate)
+#which(lizard[1] == "y")
 
 flat_lizard <- unlist(lizard,use.names = FALSE)
 mc_lizard <-  markovchainFit(flat_lizard)
@@ -272,19 +258,79 @@ mc_sim2$estimate
 Q
 
 ## Q2.3
-library(ape)
-ape::write.dna(flat_lizard, file ="lizard_flat.fasta", format = "fasta", append =FALSE, nbcol = 6, colsep = " ", colw = 10)
+# https://www.biostars.org/p/179953/
+library(msa)
+library(seqinr)
+library(lattice)
+#install.packages("seqinr")
 
-ape::write.dna(flat_sim1, file ="sim1_flat.fasta", format = "fasta", append =FALSE, nbcol = 6, colsep = " ", colw = 10)
+aligment_lizard <- msa("lizard_seqs.fasta", type="dna")
+aligment_sim1 <- msa("sim1_seq.fasta", type="dna")
+aligment_sim2 <- msa("lizard_sim_seqs.fasta", type="dna")
 
-ape::write.dna(flat_sim2, file ="sim2_flat.fasta", format = "fasta", append =FALSE, nbcol = 6, colsep = " ", colw = 10)
+aligment_lizard2 <- msaConvert(aligment_lizard, type="seqinr::alignment")
+dist_lizard <- seqinr::dist.alignment(aligment_lizard2,matrix="identity")
 
-#ape::dist.dna(as.DNAbin(lizard[1]),as.DNAbin(sim1[1]),model="F81")
-#ape::clustal()
-# if (!requireNamespace("BiocManager", quietly = TRUE))
-#     install.packages("BiocManager")
-# BiocManager::install("msa", version = "3.8")
-# library(msa)
-filepath <- system.file("lizard_flat.fasta", "sim1_flat.fasta", package="msa")
-mySeqs <- readAAStringSet(filepath)
-msa(mySeqs)
+aligment_sim1_2 <- msaConvert(aligment_sim1, type="seqinr::alignment")
+dist_sim1 <- seqinr::dist.alignment(aligment_sim1_2,matrix="identity")
+
+aligment_sim2_2 <- msaConvert(aligment_sim2, type="seqinr::alignment")
+dist_sim2 <- seqinr::dist.alignment(aligment_sim2_2,matrix="identity")
+
+# the seqinr::dist.alignment computes the square root distance
+dm_lizard <- as.matrix(dist_lizard)
+dm_sim1 <- as.matrix(dist_sim1)
+dm_sim2 <- as.matrix(dist_sim2)
+
+# heatmaps
+new.palette=colorRampPalette(c("black","red","yellow","white"),space="rgb")
+levelplot(dm_lizard[1:ncol(dm_lizard),ncol(dm_lizard):1],col.regions=new.palette(20))
+levelplot(dm_sim1[1:ncol(dm_sim1),ncol(dm_sim1):1],col.regions=new.palette(20))
+levelplot(dm_sim2[1:ncol(dm_sim2),ncol(dm_sim2):1],col.regions=new.palette(20))
+
+# Question 3: Phylogeny reconstruction
+## Q 3.1
+nj_tree <- function(x){
+    tr <- nj(x)
+    tr$tip.label <- names(lizards_sequences)
+    return(tr)
+} 
+
+
+hemoTree_lizard <- nj_tree(dist_lizard)
+
+
+
+hemoTree_sim1 <- nj_tree(dm_sim1)
+
+
+hemoTree_sim2 <- nj_tree(dm_sim2)
+
+# Perform a phylogenetic bootstrap analysis
+
+
+boot_lizard <-  boot.phylo(hemoTree_lizard, dm_lizard, FUN=nj_tree, quiet = TRUE)
+boot_s1     <- boot.phylo(hemoTree_sim1, dm_sim1, FUN=nj_tree, quiet = TRUE)
+boot_s2     <- boot.phylo(hemoTree_sim2, dm_sim2, FUN=nj_tree, quiet = TRUE)
+
+#it is the number of bootstraped trees that have the same breaks as your main input tree
+
+
+## Q3.2
+
+plot(hemoTree_lizard, main="Phylogenetic Tree of Lizard")
+plot(hemoTree_sim1, main="Phylogenetic Tree of Lizard DNA Sim1")
+plot(hemoTree_sim2, main="Phylogenetic Tree of Lizard DNA Sim2")
+
+comp1 <- ape::comparePhylo(hemoTree_lizard,hemoTree_sim1)
+comp2 <- ape::comparePhylo(hemoTree_lizard,hemoTree_sim2)
+comp12 <- ape::comparePhylo(hemoTree_sim1,hemoTree_sim2)
+# An ultrametric tree - a tree where all the path-lengths from the root to the tips are equal
+
+
+
+
+
+
+
+
