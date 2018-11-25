@@ -2,7 +2,9 @@
 title: "Bioinformatics Lab2"
 author: "Milda Poceviciute"
 date: "24 November 2018"
-output: pdf_document
+output:
+  html_document:
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE}
@@ -248,9 +250,9 @@ flat_sim2 <- unlist(sim2,use.names = FALSE)
 mc_sim2 <-  markovchainFit(flat_sim2,method = "bootstrap", nboot = 3, name = "Bootstrap Mc")
 
 # comparison of the estimated transition matrices
-mc_lizard$estimate
-flat_sim1$estimate
-mc_sim2$estimate
+#mc_lizard$estimate
+#flat_sim1$estimate
+#mc_sim2$estimate
 Q
 
 #markovchainSequence() - can use markov model to predict a sequence
@@ -266,10 +268,10 @@ plot(mc_sim2$estimate)
 
 ```{r}
 # Results from the zero order 
-    barplot(zeroOrderFreq,col=1:4,
-            main="Compositional bias of each nucleotide\nZero Order Markov Chain",
-            xlab="Base",
-            ylab="Base proportion")
+    # barplot(zeroOrderFreq,col=1:4,
+    #         main="Compositional bias of each nucleotide\nZero Order Markov Chain",
+    #         xlab="Base",
+    #         ylab="Base proportion")
 
 ```
 
