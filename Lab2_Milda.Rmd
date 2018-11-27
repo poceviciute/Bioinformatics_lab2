@@ -1,10 +1,8 @@
 ---
 title: "Bioinformatics Lab2"
-author: "Milda Poceviciute"
+author: "Milda Poceviciute, Fanny Karelius, Rab Nawaz Jan Sher and Saman Zahid"
 date: "24 November 2018"
-output:
-  html_document:
-    df_print: paged
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
@@ -235,7 +233,9 @@ sim2 <- as.character(simulated_seq2)
 
 
 flat_lizard <- unlist(lizard,use.names = FALSE)
-mc_lizard <-  markovchainFit(flat_lizard,method = "bootstrap", nboot = 3, name = "Bootstrap Mc")
+mc_lizard <-  markovchainFit(flat_lizard,method = "bootstrap", nboot = 3, 
+                             name = "Bootstrap Mc",
+                             parallel = TRUE)
 
 # the original data contains some "weird nucleotides" - what to do with them?
 which(flat_lizard == "y")
@@ -244,35 +244,26 @@ which(flat_lizard == "r")
 which(flat_lizard == "s")
 
 flat_sim1 <- unlist(sim1,use.names = FALSE)
-mc_sim1 <-  markovchainFit(flat_sim1,method = "bootstrap", nboot = 3, name = "Bootstrap Mc")
+mc_sim1 <-  markovchainFit(flat_sim1,method = "bootstrap", nboot = 3, 
+                           name = "Bootstrap Mc",
+                           parallel = TRUE
+                           )
 
 flat_sim2 <- unlist(sim2,use.names = FALSE)
-mc_sim2 <-  markovchainFit(flat_sim2,method = "bootstrap", nboot = 3, name = "Bootstrap Mc")
+mc_sim2 <-  markovchainFit(flat_sim2,method = "bootstrap", nboot = 3, 
+                           name = "Bootstrap Mc",
+                           parallel = TRUE
+                           )
 
-# comparison of the estimated transition matrices
-#mc_lizard$estimate
-#flat_sim1$estimate
-#mc_sim2$estimate
-Q
 
-#markovchainSequence() - can use markov model to predict a sequence
 ```
 
-We see that the original data set from GenBank contains a small amount of additional "nucleotides": they are called "y", "m", and "r". They are probably some measurement errors that were produced when the DNA sequence was scanned (IS THIS TRUE??).
+We see that the original data set from GenBank contains a small amount of additional "nucleotides": they are called "y", "m", and "r". They are probably some measurement errors that were produced when the DNA sequence was scanned.
 
 ```{r}
 plot(mc_lizard$estimate)
 plot(mc_sim1$estimate)
 plot(mc_sim2$estimate)
-```
-
-```{r}
-# Results from the zero order 
-    # barplot(zeroOrderFreq,col=1:4,
-    #         main="Compositional bias of each nucleotide\nZero Order Markov Chain",
-    #         xlab="Base",
-    #         ylab="Base proportion")
-
 ```
 
 In the first order Markov chains we assume that the nucleotide $X_n$ only depends on a previous nucleotide, namely $X_{n-1}$. This is not a reasonable assumption, as DNA (or RNA) sequences contain the codons: the triplets of the nulceotides that determine what amino acids will be produced from it. Hence, it may be more reasonable that the most important dependences are between nucleotides in these triplets. In the lecture it was mentioned that there is some research supporting that a sixth order Markov Chain models perform better. That implies that the $n$th nucleotide depends on what were the previous 5 nucleotides. 
@@ -316,65 +307,145 @@ The plots illustrate how much overlaying the sequences have in each dataset. The
 ## Q3.1
 
 ```{r}
-nj_tree <- function(x){
-    tr <- nj(x)
-    tr$tip.label <- names(lizards_sequences)
-    return(tr)
+library(phangorn)
+
+
+upgma_tree <- function(x){
+  tree <- upgma(x)
+  tree$tip.label <- names(lizards_sequences)
+  return(tree)
 } 
 
 
-hemoTree_lizard <- nj_tree(dist_lizard)
+lizard_seq_tree <- upgma_tree(dm_lizard)
+#plot(lizard_seq_tree, main="Phylogenetic Tree of Lizard DNA")
 
 
 
-hemoTree_sim1 <- nj_tree(dm_sim1)
+sim1_seq_tree <- upgma_tree(dm_sim1)
+#plot(sim1_seq_tree, main="Phylogenetic Tree of Lizard DNA sim1")
 
 
-hemoTree_sim2 <- nj_tree(dm_sim2)
+sim2_seq_tree <- upgma_tree(dm_sim2)
+#plot(sim2_seq_tree, main="Phylogenetic Tree of Lizard DNAs sim2")
 
-# Perform a phylogenetic bootstrap analysis
+
+boot_lizard <-  boot.phylo(lizard_seq_tree, dm_lizard, FUN=upgma_tree, trees  = TRUE,quiet = TRUE)
+sim1_boot     <- boot.phylo(sim1_seq_tree, dm_sim1, FUN=upgma_tree, trees  = TRUE,quiet = TRUE)
+sim2_boot     <- boot.phylo(sim2_seq_tree, dm_sim2, FUN=upgma_tree, trees  = TRUE,quiet = TRUE)
 
 
-boot_lizard <-  boot.phylo(hemoTree_lizard, dm_lizard, FUN=nj_tree, quiet = TRUE)
-boot_s1     <- boot.phylo(hemoTree_sim1, dm_sim1, FUN=nj_tree, quiet = TRUE)
-boot_s2     <- boot.phylo(hemoTree_sim2, dm_sim2, FUN=nj_tree, quiet = TRUE)
+```
 
-#it is the number of bootstraped trees that have the same breaks as your main input tree
+### Extracting Clades
+```{r}
+lizard_clade = prop.clades(lizard_seq_tree,boot_lizard$trees,rooted = TRUE)
+sim1_clade = prop.clades(sim1_seq_tree,sim1_boot$trees,rooted = TRUE)
+sim2_clade = prop.clades(sim2_seq_tree,sim2_boot$trees,rooted = TRUE)
+```
+
+
+
+```{r,echo=FALSE}
+layout(1)
+par(mar = rep(2, 4))
+plot(lizard_seq_tree, main = "Phylogenetic Tree of Lizard DNA & Clades")
+nodelabels(lizard_clade)
+legend("bottomright", legend = c("Clades"), pch = 22,
+       pt.bg = c("lightblue"), pt.cex = 2.5)
+
+
+```
+
+
+
+```{r,echo=FALSE}
+layout(1)
+par(mar = rep(2, 4))
+plot(lizard_seq_tree, main = "Phylogenetic Tree of Lizard DNA & Clades")
+nodelabels(sim1_clade)
+legend("bottomright", legend = c("Clades"), pch = 22,
+       pt.bg = c("lightblue"), pt.cex = 2.5)
+
+
+```
+
+
+
+```{r,echo=FALSE}
+
+plot(sim2_seq_tree, main = "Phylogenetic Tree of Lizard DNA & sim2 Clades")
+nodelabels(sim2_clade)
+legend("bottomright", legend = c("Clades"), pch = 22,
+       pt.bg = c( "lightblue"), pt.cex = 2.5)
+
 
 ```
 
 ## Q3.2
 
 ```{r}
+library(phangorn)
+path_diff_sim1_lizard <- path.dist(sim1_seq_tree,lizard_seq_tree)
+path_diff_sim2_lizard <- path.dist(sim2_seq_tree,lizard_seq_tree)
+path_diff_sim1_sim2 <- path.dist(sim1_seq_tree,sim2_seq_tree)
 
-plot(hemoTree_lizard, main="Phylogenetic Tree of Lizard")
-plot(hemoTree_sim1, main="Phylogenetic Tree of Lizard DNA Sim1")
-plot(hemoTree_sim2, main="Phylogenetic Tree of Lizard DNA Sim2")
 
+felenstein_diff_sim1_lizard <- KF.dist(sim1_seq_tree,lizard_seq_tree)
+felenstein_diff_sim2_lizard <- KF.dist(sim2_seq_tree,lizard_seq_tree)
+felenstein_diff_sim1_sim2 <- KF.dist(sim1_seq_tree,sim2_seq_tree)
+
+result = data.frame(path_difference=c(path_diff_sim1_lizard,
+                                   path_diff_sim2_lizard,
+                                   path_diff_sim1_sim2),
+                 felenstein_distance=c(felenstein_diff_sim1_lizard,
+                                       felenstein_diff_sim2_lizard,
+                                       felenstein_diff_sim1_sim2)
+                 )
+rownames(result) = c("sim1 vs lizard","sim2 vs lizard","sim1 vs sim2")
+knitr::kable(result)
 ```
+
+### Geodesic Distance (Distance between edeges)
+```{r}
+library(distory)
+#distance between edeges using geodesic
+geodesic_dist = dist.multiPhylo(list(lizard_seq_tree,sim1_seq_tree,sim2_seq_tree), method = "geodesic")
+geodesic_dist = as.matrix(geodesic_dist)
+geodesic_dist
+```
+
+
+It can be seen from the path distance, Kuhner Felensteins distance and edge distance that tree from simulation 1 differs more from expected lizard tree than simulation 2. It can also be observed that both simulations are closer to each other that is in terms of distance.
 
 ```{r}
 
-comp1 <- ape::comparePhylo(hemoTree_lizard,hemoTree_sim1)
-comp2 <- ape::comparePhylo(hemoTree_lizard,hemoTree_sim2)
-comp12 <- ape::comparePhylo(hemoTree_sim1,hemoTree_sim2)
-# An ultrametric tree - a tree where all the path-lengths from the root to the tips are equal
+comp1 <- comparePhylo(lizard_seq_tree,sim1_seq_tree)
+comp2 <- comparePhylo(lizard_seq_tree,sim2_seq_tree)
+comp12 <- comparePhylo(sim1_seq_tree,sim2_seq_tree)
 
+```
+
+
+```{r}
+comp1$messages
 ```
 
 ```{r}
-plot(pressure)
+comp2$messages
 ```
 
 ```{r}
-plot(pressure)
-```
-
-```{r}
-plot(pressure)
+comp12$messages
 ```
 
 
+
+The comparision in terms of tips,nodes,label and clades also implies that simulation 2 is more similar to lizard tree as it has 27 different clades from expected lizard tree while simulation 1 has 28 different clades
+
+
+```{r, ref.label=knitr::all_labels(),echo=TRUE,eval=FALSE}
+```
 
 
 
