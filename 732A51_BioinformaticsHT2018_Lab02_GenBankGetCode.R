@@ -11,6 +11,6 @@ lizards_accession_numbers <- c("JF806202", "HM161150", "FJ356743", "JF806205",
                                "JF806209") 
 lizards_sequences<-ape::read.GenBank(lizards_accession_numbers)
 print(lizards_sequences)
-ape::write.dna(lizards_sequences, file ="lizard_seqs.fasta", format = "fasta", append =FALSE, nbcol = 6, colsep = " ", colw = 10)
+ape::write.dna(lizards_sequences, file ="lizard_seqs.fasta", format = "fasta")
 
 

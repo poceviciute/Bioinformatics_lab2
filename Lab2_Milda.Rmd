@@ -45,6 +45,7 @@ for (i in 1:length(lizards_sequences)){
 # convert result to the DNAbin class
 simulated_seq1 <- as.DNAbin(new_seq_list)
 names(simulated_seq1) <- names(lizards_sequences)
+#ape::write.dna(simulated_seq1, file ="sim1_seq.fasta", format = "fasta", colsep = "")
 
 ```
 
@@ -68,8 +69,9 @@ In this part we simulate another set of DNA data with similar characteristics as
 
 ```{r}
 # Simulate a tree with 33 nodes
-tree <- rtree(n = 33, rooted = TRUE, tip.label = names(lizards_sequences) )
-plot(tree, edge.width = 2)
+tree<- TreeSim::sim.bd.taxa(n=33, numbsim=1, lambda=1, mu=0)[[1]]
+tree$tip.label <- lizards_accession_numbers
+plot(tree, yaxt = "n")
 
 ```
 
@@ -91,7 +93,7 @@ for (i in 1:(length(DNA_list) - 1)) {
 
 # Transition matrix is finally computed
 Q <- matrix / rowSums(matrix)
-Q_lower <- Q[lower.tri(Q)]
+#Q_lower <- Q[lower.tri(Q)]
 # Other parameters that are needed for phangorn package function
 bf <-  ape::base.freq(lizards_sequences)
 size <- round(mean(len_list))
@@ -105,7 +107,7 @@ simulated_seq_tree <-  phangorn::simSeq(
         l = size,
         type = "DNA",
         bf = bf,
-        Q = Q_lower)
+        Q = Q)
 
 # change numbers into letters   
 simulated_seq_tree2 <- lapply(simulated_seq_tree,function(seq){
@@ -120,7 +122,7 @@ simulated_seq_tree2 <- lapply(simulated_seq_tree,function(seq){
 
 simulated_seq2 <- as.DNAbin(simulated_seq_tree2)
 # Write the simulated sequence to a fasta file
-#ape::write.dna(simulated_seq2, file ="lizard_sim_seqs.fasta", format = "fasta", append =FALSE, nbcol = 6, colsep = " ", colw = 10)
+ape::write.dna(simulated_seq2, file ="sim2_seqs.fasta", format = "fasta", colsep = "")
 
 ```
 
@@ -140,7 +142,7 @@ ape::base.freq(simulated_seq2)
 
 ```
 
-The base compositions of all simulated sequences are quite similar to the original one. The sequence from Q1.2 seems to have a bit more similar composition to the original one than the sequences from Q1.2. ANY IDEAS WHY??
+The base compositions of all simulated sequences are quite similar to the original one.
 
 # Question 2: Sequence analysis
 
@@ -206,21 +208,40 @@ The nucleotide sequences were transformed into amino acid sequences using the EM
 
 amino_lizard_seq <- read.fasta("lizard_amino_seqs.fasta")
 amino_sim1_seq <- read.fasta("sim1_amino_seq.fasta")
-amino_sim2_seq <- read.fasta("lizard_amino_sim_seqs.fasta")
-```
+amino_sim2_seq <- read.fasta("sim2_amino_seq.fasta")
 
-WHAT DO WE COMMENT ABOUT THE STOP CODONS???
+
+amino_rev_com_lizard_seq <- read.fasta("rev_com_lizard_amino_acid.fasta")
+amino_rev_com_sim1_seq <- read.fasta("rev_com_sim1_amino_acid.fasta")
+amino_rev_com_sim2_seq <- read.fasta("rev_com_sim2_amino_acid.fasta")
+
+```
 
 ```{r}
-find_stops <- function(a){
-    stop <- a[which(a == "*")]
-    return(length(stop))
+stop_code_count <- function(amino_acid_seq){
+  
+  stop_count = c()
+  for (i in 1:length(amino_acid_seq)) {
+    
+    sequence = amino_acid_seq[[i]]
+    stop <- sequence[which(sequence == "*")]
+    stop_count[i] = length(stop)
+  }
+  return(stop_count)
 }
-stop_codons_lizard <- lapply(amino_lizard_seq,find_stops)
-stop_codons_sim1 <- lapply(amino_sim1_seq,find_stops)
-stop_codons_sim2 <- lapply(amino_sim2_seq,find_stops)
+df = data.frame(lizard_seq = stop_code_count(amino_lizard_seq),
+           "sim1" = stop_code_count(amino_sim1_seq),
+           "sim2" = stop_code_count(amino_sim2_seq),
+           "rev_comp_lizard_seq" = stop_code_count(amino_rev_com_lizard_seq),
+           "rev_comp_sim1_seq" = stop_code_count(amino_rev_com_sim1_seq),
+           "rev_comp_sim2_seq" = stop_code_count(amino_rev_com_sim2_seq)
+          )
+
+knitr::kable(df)
 ```
 
+For some sequences the stop codons are more in true in sequence than in simulated sequences but there are some sequences for which the stop codon does not appear at all in the original sequence but it appears many times in the simulated sequences.
+It could be possible because the nucleotides forming the stop codon might have been drawn more in simulated sequences.
 
 ## Q2.2
 
@@ -258,7 +279,8 @@ mc_sim2 <-  markovchainFit(flat_sim2,method = "bootstrap", nboot = 3,
 
 ```
 
-We see that the original data set from GenBank contains a small amount of additional "nucleotides": they are called "y", "m", and "r". They are probably some measurement errors that were produced when the DNA sequence was scanned.
+We see that the original data set from GenBank contains a small amount of additional "nucleotides": they are called "y", "m", and "r". 
+These are the nucleotides which we are not sure about where Y indicates unsurity in A or G while R shows ambiguity in C or T and M appears when there is no surity at all.
 
 ```{r}
 plot(mc_lizard$estimate)
@@ -275,7 +297,7 @@ In this part the three DNA collections of the sequences are aligned using the _m
 ```{r}
 aligment_lizard <- msa("lizard_seqs.fasta", type="dna")
 aligment_sim1 <- msa("sim1_seq.fasta", type="dna")
-aligment_sim2 <- msa("lizard_sim_seqs.fasta", type="dna")
+aligment_sim2 <- msa("sim2_seq.fasta", type="dna")
 
 aligment_lizard2 <- msaConvert(aligment_lizard, type="seqinr::alignment")
 dist_lizard <- seqinr::dist.alignment(aligment_lizard2,matrix="identity")

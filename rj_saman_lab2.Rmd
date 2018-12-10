@@ -206,9 +206,6 @@ paste("In the simulated data in Q1.2 : ",cg_s2)
 
 ```
 
-
-
-
 AT contents are:
 ```{r}
 comp_true <- base.freq(lizard_seq_data)
