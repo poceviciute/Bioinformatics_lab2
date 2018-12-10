@@ -70,7 +70,7 @@ In this part we simulate another set of DNA data with similar characteristics as
 ```{r}
 # Simulate a tree with 33 nodes
 tree<- TreeSim::sim.bd.taxa(n=33, numbsim=1, lambda=1, mu=0)[[1]]
-tree$tip.label <- lizards_accession_numbers
+tree$tip.label <- names(lizards_sequences)
 plot(tree, yaxt = "n")
 
 ```
@@ -297,7 +297,7 @@ In this part the three DNA collections of the sequences are aligned using the _m
 ```{r}
 aligment_lizard <- msa("lizard_seqs.fasta", type="dna")
 aligment_sim1 <- msa("sim1_seq.fasta", type="dna")
-aligment_sim2 <- msa("sim2_seq.fasta", type="dna")
+aligment_sim2 <- msa("sim2_seqs.fasta", type="dna")
 
 aligment_lizard2 <- msaConvert(aligment_lizard, type="seqinr::alignment")
 dist_lizard <- seqinr::dist.alignment(aligment_lizard2,matrix="identity")
@@ -384,7 +384,7 @@ legend("bottomright", legend = c("Clades"), pch = 22,
 ```{r,echo=FALSE}
 layout(1)
 par(mar = rep(2, 4))
-plot(lizard_seq_tree, main = "Phylogenetic Tree of Lizard DNA & Clades")
+plot(sim1_seq_tree, main = "Sim 1 Phylogenetic Tree of Lizard DNA & Clades")
 nodelabels(sim1_clade)
 legend("bottomright", legend = c("Clades"), pch = 22,
        pt.bg = c("lightblue"), pt.cex = 2.5)
@@ -396,7 +396,7 @@ legend("bottomright", legend = c("Clades"), pch = 22,
 
 ```{r,echo=FALSE}
 
-plot(sim2_seq_tree, main = "Phylogenetic Tree of Lizard DNA & sim2 Clades")
+plot(sim2_seq_tree, main = "Sim 2 Phylogenetic Tree of Lizard DNA & Clades")
 nodelabels(sim2_clade)
 legend("bottomright", legend = c("Clades"), pch = 22,
        pt.bg = c( "lightblue"), pt.cex = 2.5)
