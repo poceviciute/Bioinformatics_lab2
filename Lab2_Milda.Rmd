@@ -202,18 +202,26 @@ cat("\n")
 print(ape::base.freq(simulated_seq2))
 ```
 
-The nucleotide sequences were transformed into amino acid sequences using the EMBOSS Transeq function, and saved to a fasta file:
+The six versions of the nucleotide sequences of the lizard (all sequences starting from nucleotide 1, nucleotide 2 and nucleotide 3, as well as the reversed and complimented versions of them) were transformed into amino acid sequences using the EMBOSS Transeq function, and saved tofasta files:
 
 ```{r, message=FALSE,warning=FALSE}
+# start from the second nucleotide
+lizard <- as.character(lizards_sequences)
+lizard_seq2 = lapply(lizard, function(a){return(as.character(a[-1]))})
+lizard_seq3 = lapply(lizard, function(a){return(as.character(a[c(-1,-2)]))})
+ape::write.dna(lizard_seq2, file ="lizard_seq2.fasta", format = "fasta", colsep = "")
+ape::write.dna(lizard_seq3, file ="lizard_seq3.fasta", format = "fasta", colsep = "")
+
+# Create 3 versions of lizard sequences
 
 amino_lizard_seq <- read.fasta("lizard_amino_seqs.fasta")
-amino_sim1_seq <- read.fasta("sim1_amino_seq.fasta")
-amino_sim2_seq <- read.fasta("sim2_amino_seq.fasta")
+amino_lizard_seq2 <- read.fasta("amino_lizard2.fasta")
+amino_lizard_seq3 <- read.fasta("amino_lizard3.fasta")
 
 
-amino_rev_com_lizard_seq <- read.fasta("rev_com_lizard_amino_acid.fasta")
-amino_rev_com_sim1_seq <- read.fasta("rev_com_sim1_amino_acid.fasta")
-amino_rev_com_sim2_seq <- read.fasta("rev_com_sim2_amino_acid.fasta")
+amino_rev_com_lizard <- read.fasta("rev_com_lizard_amino_acid.fasta")
+amino_rev_com_lizard2 <- read.fasta("amino_reversed_lizard2.fasta")
+amino_rev_com_lizard3 <- read.fasta("amino_reversed_lizard3.fasta")
 
 ```
 
@@ -229,19 +237,20 @@ stop_code_count <- function(amino_acid_seq){
   }
   return(stop_count)
 }
-df = data.frame(lizard_seq = stop_code_count(amino_lizard_seq),
-           "sim1" = stop_code_count(amino_sim1_seq),
-           "sim2" = stop_code_count(amino_sim2_seq),
-           "rev_comp_lizard_seq" = stop_code_count(amino_rev_com_lizard_seq),
-           "rev_comp_sim1_seq" = stop_code_count(amino_rev_com_sim1_seq),
-           "rev_comp_sim2_seq" = stop_code_count(amino_rev_com_sim2_seq)
+df = data.frame("lizard_seq" = sum(stop_code_count(amino_lizard_seq)),
+           "lizard_seq2" = sum(stop_code_count(amino_lizard_seq2)),
+           "lizard_seq3" = sum(stop_code_count(amino_lizard_seq3)),
+           "rev_comp_lizard_seq" = sum(stop_code_count(amino_rev_com_lizard)),
+           "rev_comp_lizard2" = sum(stop_code_count(amino_rev_com_lizard2)),
+           "rev_comp_lizard3" = sum(stop_code_count(amino_rev_com_lizard3))
           )
 
 knitr::kable(df)
 ```
 
-For some sequences the stop codons are more in true in sequence than in simulated sequences but there are some sequences for which the stop codon does not appear at all in the original sequence but it appears many times in the simulated sequences.
-It could be possible because the nucleotides forming the stop codon might have been drawn more in simulated sequences.
+The above table shows the total number of stop codans in each of the fasta files of lizard sequences. We can see that the number of stop codans is very high in general (this is due to the fact that the sequences is yet not alligned, hence the same parts of the real RNA strand is repeated multiple times). However, when we started to translate into amino acids from the second nucleotide, we have considerably less stop codans than if we translated from the first or third nucleotide. The all reversed and complimented sequences have exactly same amount of stop codans. This is reasonable, as they all are exactly the same sequences apart from the last 1-3 nucleotides (the length of the sequences are different, and the first nucleotides became the last ones after this operation). 
+
+Therefore, it is more likely that the true sequence starts from nucleotide 2. However, to find out the true underlying sequence, we'd need to do much more work. We'd have to check all possible combinations of the different starts of all the sequences in the data set. Also probably we would need to query the databases and try to find if there is some information about the exact sequence. 
 
 ## Q2.2
 
@@ -251,16 +260,10 @@ In this part we do markov chain analysis of the data sets. We combine all the se
 lizard <- as.character(lizards_sequences)
 sim1 <- as.character(simulated_seq1)
 sim2 <- as.character(simulated_seq2)
-
-# removing embiguties
-remove_values = c("y","m","r","s")
-flat_lizard <- flat_lizard[!flat_lizard %in% remove_values]
-
 flat_lizard <- unlist(lizard,use.names = FALSE)
 mc_lizard <-  markovchainFit(flat_lizard,method = "bootstrap", nboot = 3, 
                              name = "Bootstrap Mc",
                              parallel = TRUE)
-
 
 flat_sim1 <- unlist(sim1,use.names = FALSE)
 mc_sim1 <-  markovchainFit(flat_sim1,method = "bootstrap", nboot = 3, 
@@ -277,8 +280,6 @@ mc_sim2 <-  markovchainFit(flat_sim2,method = "bootstrap", nboot = 3,
 
 ```
 
-We see that the original data set from GenBank contains a small amount of additional "nucleotides": they are called "y", "m", and "r". 
-These are the nucleotides which we are not sure about where Y indicates unsurity in A or G while R shows ambiguity in C or T and M appears when there is no surity at all.
 
 ```{r}
 plot(mc_lizard$estimate)
