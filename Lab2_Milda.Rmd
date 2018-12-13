@@ -261,17 +261,21 @@ lizard <- as.character(lizards_sequences)
 sim1 <- as.character(simulated_seq1)
 sim2 <- as.character(simulated_seq2)
 flat_lizard <- unlist(lizard,use.names = FALSE)
+remove_values = c("y","m","r","s")
+flat_lizard <- flat_lizard[!flat_lizard %in% remove_values]
 mc_lizard <-  markovchainFit(flat_lizard,method = "bootstrap", nboot = 3, 
                              name = "Bootstrap Mc",
                              parallel = TRUE)
 
 flat_sim1 <- unlist(sim1,use.names = FALSE)
+flat_sim1 <- flat_sim1[!flat_sim1 %in% remove_values]
 mc_sim1 <-  markovchainFit(flat_sim1,method = "bootstrap", nboot = 3, 
                            name = "Bootstrap Mc",
                            parallel = TRUE
                            )
 
 flat_sim2 <- unlist(sim2,use.names = FALSE)
+flflat_sim2at_sim1 <- flat_sim2[!flat_sim2 %in% remove_values]
 mc_sim2 <-  markovchainFit(flat_sim2,method = "bootstrap", nboot = 3, 
                            name = "Bootstrap Mc",
                            parallel = TRUE
