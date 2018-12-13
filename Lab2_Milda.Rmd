@@ -252,17 +252,15 @@ lizard <- as.character(lizards_sequences)
 sim1 <- as.character(simulated_seq1)
 sim2 <- as.character(simulated_seq2)
 
+# removing embiguties
+remove_values = c("y","m","r","s")
+flat_lizard <- flat_lizard[!flat_lizard %in% remove_values]
 
 flat_lizard <- unlist(lizard,use.names = FALSE)
 mc_lizard <-  markovchainFit(flat_lizard,method = "bootstrap", nboot = 3, 
                              name = "Bootstrap Mc",
                              parallel = TRUE)
 
-# the original data contains some "weird nucleotides" - what to do with them?
-which(flat_lizard == "y")
-which(flat_lizard == "m")
-which(flat_lizard == "r")
-which(flat_lizard == "s")
 
 flat_sim1 <- unlist(sim1,use.names = FALSE)
 mc_sim1 <-  markovchainFit(flat_sim1,method = "bootstrap", nboot = 3, 
