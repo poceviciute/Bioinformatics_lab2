@@ -260,6 +260,8 @@ In this part we do markov chain analysis of the data sets. We combine all the se
 lizard <- as.character(lizards_sequences)
 sim1 <- as.character(simulated_seq1)
 sim2 <- as.character(simulated_seq2)
+
+
 flat_lizard <- unlist(lizard,use.names = FALSE)
 remove_values = c("y","m","r","s")
 flat_lizard <- flat_lizard[!flat_lizard %in% remove_values]
@@ -267,15 +269,19 @@ mc_lizard <-  markovchainFit(flat_lizard,method = "bootstrap", nboot = 3,
                              name = "Bootstrap Mc",
                              parallel = TRUE)
 
+# the original data contains some "weird nucleotides" - what to do with them?
+which(flat_lizard == "y")
+which(flat_lizard == "m")
+which(flat_lizard == "r")
+which(flat_lizard == "s")
+
 flat_sim1 <- unlist(sim1,use.names = FALSE)
-flat_sim1 <- flat_sim1[!flat_sim1 %in% remove_values]
 mc_sim1 <-  markovchainFit(flat_sim1,method = "bootstrap", nboot = 3, 
                            name = "Bootstrap Mc",
                            parallel = TRUE
                            )
 
 flat_sim2 <- unlist(sim2,use.names = FALSE)
-flflat_sim2at_sim1 <- flat_sim2[!flat_sim2 %in% remove_values]
 mc_sim2 <-  markovchainFit(flat_sim2,method = "bootstrap", nboot = 3, 
                            name = "Bootstrap Mc",
                            parallel = TRUE
@@ -284,9 +290,9 @@ mc_sim2 <-  markovchainFit(flat_sim2,method = "bootstrap", nboot = 3,
 
 ```
 
-We see that the original data set from GenBank contains a small amount of additional "nucleotides": they are called "y", "m", and "r".
+There are some additional letters in the lizard sequence. These are the nucleotides which we are not sure about where Y indicates unsurity in A or G while R shows ambiguity in C or T and M appears when there is no surity at all. We removed them before fitting the markov chains.
 
-These are the nucleotides which we are not sure about where Y indicates unsurity in A or G while R shows ambiguity in C or T and M appears when there is no surity at all.
+We see that the original data set from GenBank has a bit different structure than the simulated ones. Though the simulated also do not match in the structure. This is due to the fact, that the "true" underlying relations of the real lizard sequences have been not passed on to either of the simulations. Simulation 1 does not have any dependencies, while simulation 2 has some dependencies from the tree structure. However, these dependencies do not match the "real" dependencies in the real sequences.
 
 ```{r}
 plot(mc_lizard$estimate)
@@ -329,7 +335,7 @@ levelplot(dm_sim2[1:ncol(dm_sim2),ncol(dm_sim2):1],col.regions=new.palette(20))
 
 ```
 
-The plots illustrate how much overlaying the sequences have in each dataset. The smaller the value (the darker the colour), the more nucleotides are matching between the corresponding sequences of the DNA. Therefore, the sequences from the data from GenBank has much more overlaying parts then the two randomly generated sequences. This result is expected as sequencing of a DNA produces "fragments" of the real DNA sequence, and those "fragments" do contain the same bits of the original DNA. The artificially simulated DNA sequences did not actually go through a process of the sequencing, hence they are way less likely to randomly contain long matching parts in their sequences. 
+The plots illustrate how much overlaying the sequences have in each dataset. The smaller the value (the darker the colour), the more nucleotides are matching between the corresponding sequences of the DNA. Therefore, the sequences from the data from GenBank has much more overlaying parts then the two randomly generated sequences. This result is expected as sequencing of a DNA produces "fragments" of the real DNA sequence, and those "fragments" do contain the same bits of the original DNA. The artificially simulated DNA sequences from simulation 1 did not actually contain any structure (all nodes were assumed independent), but the simulated sequences from simulation 2 already contain some dependencies because of shared ancesters that were introduced by a tree structure (but this does not match the "true" dependencies from the original data). Hence they are way less likely to randomly contain long matching parts in their sequences. 
 
 # Question 3: Phylogeny reconstruction
 ## Q3.1
