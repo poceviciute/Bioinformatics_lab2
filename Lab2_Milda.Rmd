@@ -265,12 +265,6 @@ mc_lizard <-  markovchainFit(flat_lizard,method = "bootstrap", nboot = 3,
                              name = "Bootstrap Mc",
                              parallel = TRUE)
 
-# the original data contains some "weird nucleotides" - what to do with them?
-which(flat_lizard == "y")
-which(flat_lizard == "m")
-which(flat_lizard == "r")
-which(flat_lizard == "s")
-
 flat_sim1 <- unlist(sim1,use.names = FALSE)
 mc_sim1 <-  markovchainFit(flat_sim1,method = "bootstrap", nboot = 3, 
                            name = "Bootstrap Mc",
@@ -286,8 +280,6 @@ mc_sim2 <-  markovchainFit(flat_sim2,method = "bootstrap", nboot = 3,
 
 ```
 
-We see that the original data set from GenBank contains a small amount of additional "nucleotides": they are called "y", "m", and "r". 
-These are the nucleotides which we are not sure about where Y indicates unsurity in A or G while R shows ambiguity in C or T and M appears when there is no surity at all.
 
 ```{r}
 plot(mc_lizard$estimate)
